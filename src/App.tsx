@@ -21,7 +21,7 @@ export function App() {
       mountRef.current.clientWidth,
       mountRef.current.clientHeight
     );
-    // Only append if not already present
+    
     if (!mountRef.current.contains(renderer.domElement)) {
       mountRef.current.appendChild(renderer.domElement);
     }
@@ -48,11 +48,9 @@ export function App() {
       earthMat
     );
 
-    // FINAL SOLUTION WITH ROTATION
     earth.rotation.y = THREE.MathUtils.degToRad(180);
     earth.rotation.x = THREE.MathUtils.degToRad(180);
     
-    // Center to Spain (41.38°N, 3.72°W)
     const coordinateSystem = {
       rotateTo(lat: number, lon: number) {
         const latRad = THREE.MathUtils.degToRad(lat);
@@ -61,9 +59,8 @@ export function App() {
         earth.rotation.y = THREE.MathUtils.degToRad(-90) - lonRad;
       }
     };
-    // 41.38, -3.72
-    // coordinateSystem.rotateTo(41.38, -3.72);
-    coordinateSystem.rotateTo(0,0);
+    // Center to Spain (41.38°N, 3.72°W)
+    coordinateSystem.rotateTo(41.38, -3.72);
 
     scene.add(earth);
 
@@ -72,7 +69,6 @@ export function App() {
       new THREE.SphereGeometry(0.2, 16, 16),
       issMaterial
     );
-    //scene.add(iss);
 
     camera.position.z = 10;
     var tle1 = "";
@@ -87,11 +83,62 @@ export function App() {
     //   })
     //   .catch(error => console.error('Error fetching TLE data:', error));
 
+    // ========== MOUSE CONTROL ==========
+    let isMouseDown = false;
+    let autoRotate = true;
+    let mouseX = 0;
+    let mouseY = 0;
+    let previousMouseX = 0;
+    let previousMouseY = 0;
+    let rotationVelocityX = 0;
+    let rotationVelocityY = 0;
+    const rotationSensitivity = 0.005;
+    const dampingFactor = 0.95;
+
+    const onMouseDown = (event: MouseEvent) => {
+      isMouseDown = true;
+      autoRotate = false;
+      mouseX = event.clientX;
+      mouseY = event.clientY;
+      previousMouseX = mouseX;
+      previousMouseY = mouseY;
+      rotationVelocityX = 0;
+      rotationVelocityY = 0;
+    };
+
+    const onMouseMove = (event: MouseEvent) => {
+      if (!isMouseDown) return;
+
+      mouseX = event.clientX;
+      mouseY = event.clientY;
+
+      const deltaX = mouseX - previousMouseX;
+      const deltaY = mouseY - previousMouseY;
+
+      rotationVelocityY = deltaX * rotationSensitivity;
+      rotationVelocityX = deltaY * rotationSensitivity;
+
+      previousMouseX = mouseX;
+      previousMouseY = mouseY;
+    };
+
+    const onMouseUp = () => {
+      isMouseDown = false;
+      setTimeout(() => {
+        if (!isMouseDown) {
+          autoRotate = true;
+        }
+      }, 2000);
+    };
+
+    window.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+
     fetch('https://cors-anywhere.com/https://isstracker.pl/en/satellites/25544')
       .then(response => response.text())
       .then(html => {
         console.info("received!");
-        // 1) locate the textarea by its id
         const idTag = 'id="tle-details"';
         const idxId = html.indexOf(idTag);
         if (idxId < 0) {
@@ -100,23 +147,18 @@ export function App() {
           return;
         }
 
-        // 2) find the '>' that opens the content
         const idxOpen = html.indexOf('>', idxId) + 1;
-        // 3) find the '</textarea>' that closes
         const idxClose = html.indexOf('</textarea>', idxOpen);
         if (idxClose < 0) {
           console.error('Did not find </textarea> closing tag');
           return;
         }
 
-        // 4) extract and clean the content
         const content = html
           .substring(idxOpen, idxClose)
           .trim();        
 
-        // 5) split lines and assign
         const lines = content.split('\n').map(l => l.trim());
-        // lines[0] = "ISS (ZARYA)"
         tle1 = (lines[1] || '');
         tle2 = (lines[2] || '');
 
@@ -127,48 +169,37 @@ export function App() {
       })
       .catch(error => console.error('Error fetching TLE data:', error));
 
-
     iss.rotation.y = THREE.MathUtils.degToRad(180);
     iss.rotation.x = THREE.MathUtils.degToRad(180);
   
-    // Create a group for the orbit
     const orbitGroup = new THREE.Group();
     scene.add(orbitGroup);
     orbitGroup.add(iss);
 
-
     let frameId: number;
-    let satrec: satellite.SatRec | null = null;   // compiled satellite
+    let satrec: satellite.SatRec | null = null;
     const orbitPoints: THREE.Vector3[] = [];
     let orbitLine: THREE.Line | null = null;
 
-    
-    // --- 1. Utilities ------------------------------------------
-    const EARTH_RADIUS = 5;                 // your sphere is 5 units
+    const EARTH_RADIUS = 5;
     const KM_TO_UNITS  = EARTH_RADIUS / 6371;
 
-    function llhToVec3(lat: number,
-                  lon: number,
-                  altKm: number): THREE.Vector3 {
-
-  const R = EARTH_RADIUS + altKm * KM_TO_UNITS;
-  
-  // Apply the same correction you use for the ISS
-  const lat2 = lat;
+    function llhToVec3(lat: number, lon: number, altKm: number): THREE.Vector3 {
+      const R = EARTH_RADIUS + altKm * KM_TO_UNITS;
+      const lat2 = lat;
   const lon2 = lon - THREE.MathUtils.degToRad(-90); // Same correction as in updateISS
 
-  return new THREE.Vector3(
-    R * Math.cos(lat2) * Math.sin(lon2),
-    R * Math.sin(lat2),
-    R * Math.cos(lat2) * Math.cos(lon2)
-  );
-}
+      return new THREE.Vector3(
+        R * Math.cos(lat2) * Math.sin(lon2),
+        R * Math.sin(lat2),
+        R * Math.cos(lat2) * Math.cos(lon2)
+      );
+    }
 
     function buildPredictedOrbit() {
-
-      const now          = new Date();
-      const minutesAhead = 100;          // ≃ 1 and a half orbits
-      const stepSec      = 30;           // resolution 30 s
+      const now = new Date();
+      const minutesAhead = 100;
+      const stepSec = 30;
       const points: THREE.Vector3[] = [];
     
       for (let t = 0; t <= minutesAhead*60; t += stepSec) {
@@ -178,7 +209,7 @@ export function App() {
         if (!position) continue;
     
         const gmst = satellite.gstime(date);
-        const geo  = satellite.eciToGeodetic(position, gmst);
+        const geo = satellite.eciToGeodetic(position, gmst);
     
         points.push(
           llhToVec3(geo.latitude, geo.longitude, geo.height)
@@ -186,14 +217,12 @@ export function App() {
       }
     
       const geom = new THREE.BufferGeometry().setFromPoints(points);
-      const mat  = new THREE.LineBasicMaterial({ color: 0xff0000 });
+      const mat = new THREE.LineBasicMaterial({ color: 0xff0000 });
       const line = new THREE.Line(geom, mat);
       orbitGroup.add(line);
     }
     
-    
     function updateISS() {
-
       if (!satrec) return;
 
       const now = new Date();
@@ -204,36 +233,32 @@ export function App() {
       const gmst = satellite.gstime(now);
       const geo = satellite.eciToGeodetic(pv.position, gmst);
 
-      const R = (5 + (geo.height / 6371)) + 400/6371; // TODO, calculate the distance, to change R
+      const R = EARTH_RADIUS + geo.height * KM_TO_UNITS;
       const lat = geo.latitude;
       const lon = geo.longitude;
       var lat2 = lat;
       var lon2 = lon - THREE.MathUtils.degToRad(-90);
 
-      // Position relative to the orbit group
       iss.position.set(
         R * Math.cos(lat2) * Math.sin(lon2),
         R * Math.sin(lat2),
         R * Math.cos(lat2) * Math.cos(lon2)
       );
 
-      /* ---------- Orbit trace ---------- */
       orbitPoints.push(iss.position.clone());
       if (orbitPoints.length > 500) orbitPoints.shift();
 
-      // Create the line the first time there are ≥2 points
       if (!orbitLine && orbitPoints.length == 500) {
         console.info("Creating orbit line with points:", orbitPoints.length);
         const geom = new THREE.BufferGeometry().setFromPoints(orbitPoints);
-        const mat  = new THREE.LineBasicMaterial({
+        const mat = new THREE.LineBasicMaterial({
           color: 0xff0000,
           depthTest: false, 
         });
-        orbitLine  = new THREE.Line(geom, mat);
+        orbitLine = new THREE.Line(geom, mat);
         orbitGroup.add(orbitLine);
       }
 
-      // Update the existing line
       if (orbitLine) {
         (orbitLine.geometry as THREE.BufferGeometry)
           .setFromPoints(orbitPoints);
@@ -242,22 +267,27 @@ export function App() {
       }
     }
 
-    
     function animate() {
       updateISS();
       
-      // ROTATE THE EARTH
-      earth.rotation.y += 0.01; // Rotation speed
+      if (autoRotate) {
+        earth.rotation.y += 0.01;
+      } else {
+        earth.rotation.y += rotationVelocityY;
+        earth.rotation.x += rotationVelocityX;
+        
+        rotationVelocityY *= dampingFactor;
+        rotationVelocityX *= dampingFactor;
+        
+        if (Math.abs(rotationVelocityY) < 0.001) rotationVelocityY = 0;
+        if (Math.abs(rotationVelocityX) < 0.001) rotationVelocityX = 0;
+      }
       
-      // Keep the ISS in its relative orbit position
       orbitGroup.rotation.copy(earth.rotation);
       
       renderer.render(scene, camera);
       frameId = requestAnimationFrame(animate);
     }
-    // Start animation only if we have TLE data
-    //animate();
-    
 
     const onResize = () => {
       if (!mountRef.current) return;
@@ -270,9 +300,12 @@ export function App() {
     return () => {
       cancelAnimationFrame(frameId);
       window.removeEventListener("resize", onResize);
+      window.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
       renderer.dispose();
       scene.clear();
-      if (mountRef.current) {
+      if (mountRef.current && mountRef.current.contains(renderer.domElement)) {
         mountRef.current.removeChild(renderer.domElement);
       }
     };
@@ -288,6 +321,7 @@ export function App() {
         padding: 0,
         backgroundColor: "black",
         position: "relative",
+        cursor: "grab",
       }}
     >
       {loading && (
