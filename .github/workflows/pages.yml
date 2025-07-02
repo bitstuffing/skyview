@@ -1,0 +1,47 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write           # to publish on GitHub Pages
+      id-token: write        # required for deploy-pages
+    steps:
+
+      # 1) Clone the repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2) Install Bun
+      - name: Install Bun
+        uses: oven-sh/bun@v1
+        with:
+          version: latest
+
+      # 3) Install dependencies and build
+      - name: Install dependencies & Build
+        run: |
+          bun install
+          # Adjust this line to the command defined in your package.json
+          # for example bun run build or bun build
+          bun run build
+
+      # 4) Configure Pages
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v3
+
+      # 5) Upload the artifact (the folder containing the build)
+      - name: Upload artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: ./dist   # Replace 'dist' with the folder where Bun generates your build
+
+      # 6) Deploy to Pages
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v2
+
