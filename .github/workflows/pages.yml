@@ -13,12 +13,14 @@ jobs:
       # 1) Checkout
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true  # Para que github_token funcione en los siguientes pasos
 
       # 2) Setup Bun
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2.0.2
         with:
-          version: latest
+          bun-version: latest
 
       # 3) Build
       - name: Install deps & Build
@@ -30,6 +32,7 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages
           folder: dist
           clean: true
