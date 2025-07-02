@@ -198,7 +198,7 @@ export function App() {
 
     function buildPredictedOrbit() {
       const now = new Date();
-      const minutesAhead = 100;
+      const minutesAhead = 95; // aprox 1 loop around the Earth
       const stepSec = 30;
       const points: THREE.Vector3[] = [];
     
