@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages via gh-pages branch
 
 on:
   push:
@@ -9,38 +9,28 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
-    permissions:
-      pages: write
-      id-token: write
-
     steps:
-
-      # 1) Clone the repo
-      - name: Checkout repository
+      # 1) Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      # 2) Install Bun
-      - name: Install Bun
+      # 2) Setup Bun
+      - name: Setup Bun
         uses: oven-sh/setup-bun@v2.0.2
         with:
           version: latest
 
-      # 3) Install dependencies and build
-      - name: Install dependencies & Build
+      # 3) Build
+      - name: Install deps & Build
         run: |
           bun install
           bun run build
 
-      # 4) Configure Pages
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v4
-
-      # 5) Upload the artifact (the folder containing the build)
-      - name: Upload artifact for GitHub Pages
-        uses: actions/upload-pages-artifact@v2
-        with:
-          path: ./dist   # Replace 'dist' with the folder where Bun generates your build
-
-      # 6) Deploy to Pages
+      # 4) Deploy to gh-pages
       - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v3
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: dist
+          clean: true
+          commit-message: "chore: deploy to gh-pages [skip ci]"
