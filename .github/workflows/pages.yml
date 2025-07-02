@@ -21,16 +21,14 @@ jobs:
 
       # 2) Install Bun
       - name: Install Bun
-        uses: oven-sh/install-bun@v3
+        uses: oven-sh/setup-bun@v2.0.2
         with:
-          bun-version: 'latest'
+          version: latest
 
       # 3) Install dependencies and build
       - name: Install dependencies & Build
         run: |
           bun install
-          # Adjust this line to the command defined in your package.json
-          # for example bun run build or bun build
           bun run build
 
       # 4) Configure Pages
