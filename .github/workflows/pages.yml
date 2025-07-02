@@ -33,14 +33,14 @@ jobs:
 
       # 4) Configure Pages
       - name: Configure GitHub Pages
-        uses: actions/configure-pages@v3
+        uses: actions/configure-pages@v4
 
       # 5) Upload the artifact (the folder containing the build)
       - name: Upload artifact for GitHub Pages
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v2
         with:
           path: ./dist   # Replace 'dist' with the folder where Bun generates your build
 
       # 6) Deploy to Pages
       - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v3
