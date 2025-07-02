@@ -8,9 +8,11 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     permissions:
-      pages: write           # to publish on GitHub Pages
-      id-token: write        # required for deploy-pages
+      pages: write
+      id-token: write
+
     steps:
 
       # 1) Clone the repo
@@ -19,9 +21,9 @@ jobs:
 
       # 2) Install Bun
       - name: Install Bun
-        uses: oven-sh/bun@v1
+        uses: oven-sh/install-bun@v3
         with:
-          version: latest
+          bun-version: 'latest'
 
       # 3) Install dependencies and build
       - name: Install dependencies & Build
@@ -44,4 +46,3 @@ jobs:
       # 6) Deploy to Pages
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v2
-
