@@ -3,13 +3,9 @@ import { useThreeScene } from "./hooks/useThreeScene";
 import { useMouseControls } from "./hooks/useMouseControls";
 import { SatelliteSelector } from "./components/SatelliteSelector";
 import { GenericSatellite, SatelliteRef } from "./constellation/GenericSatellite";
+import { SATELLITE_CATALOG as AVAILABLE_SATELLITES2 } from "./data/satellites";
 
-const AVAILABLE_SATELLITES = [
-  { id: 'iss', name: 'International Space Station (ISS)', noradId: 25544, color: '#ff0000' },
-  { id: 'hubble', name: 'Hubble Space Telescope', noradId: 20580, color: '#00ff00' },
-  { id: 'tiangong', name: 'Tiangong Space Station', noradId: 48274, color: '#0000ff' },
-  { id: 'starlink', name: 'Starlink-1007', noradId: 44713, color: '#ffff00' },
-];
+let AVAILABLE_SATELLITES = AVAILABLE_SATELLITES2.filter(sat => sat.enabled);
 
 export function App() {
   const [loading, setLoading] = useState(true);
